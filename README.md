@@ -1,4 +1,7 @@
 <div align="center">
+  <a href="https://github.com/FaizanAKhan786/interviewlens-ai"><img src="docs/project-showcase.svg" alt="interviewlens-ai conceptual AI system architecture artwork" width="100%" /></a>
+  <br />
+
 
 # InterviewLens AI
 ### Turn recorded interviews into focused practice
