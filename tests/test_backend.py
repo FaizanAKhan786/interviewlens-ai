@@ -320,7 +320,17 @@ def test_resume_parser_and_alignment(db):
     assert "Redis" in align["showcased_in_interview"] or "Python" in align["showcased_in_interview"]
     assert "Kafka" in align["neglected_resume_skills"] or "Kubernetes" in align["neglected_resume_skills"]
 
-    # Verify endpoint
+    # The endpoint must not invent a resume when none has been uploaded.
+    if user.profile:
+        user.profile.resume_text = ""
+        db.commit()
+    with pytest.raises(HTTPException) as missing:
+        interviews.get_resume_alignment(inv.id, current_user=user, db=db)
+    assert missing.value.status_code == 404
+
+    # Verify alignment after providing real resume text.
+    user.profile.resume_text = sample_resume
+    db.commit()
     res = interviews.get_resume_alignment(inv.id, current_user=user, db=db)
     assert res["alignment_score"] > 50
     assert len(res["detected_resume_skills"]) > 0
@@ -343,3 +353,43 @@ def test_interview_deletion(db):
     with pytest.raises(HTTPException) as exc:
         interviews.get_interview(inv_id, current_user=user, db=db)
     assert exc.value.status_code == 404
+
+
+# Regression: users must not submit practice attempts for another user's question.
+def test_private_practice_question_isolation(db):
+    owner = User(
+        id=gen_uuid(), email="practice.owner@interviewlens.ai",
+        full_name="Practice Owner", hashed_password=hash_password("TestOwnerPassword!"),
+    )
+    outsider = User(
+        id=gen_uuid(), email="practice.outsider@interviewlens.ai",
+        full_name="Practice Outsider", hashed_password=hash_password("TestOutsiderPassword!"),
+    )
+    db.add_all([owner, outsider])
+    db.flush()
+    question = PracticeQuestion(
+        id=gen_uuid(), user_id=owner.id, question_text="Design an agentic RAG system.",
+        source_type="INTERVIEW_DERIVED",
+    )
+    db.add(question)
+    db.commit()
+
+    with pytest.raises(HTTPException) as exc:
+        practice.submit_practice_attempt(
+            PracticeAttemptCreate(question_id=question.id, transcript="An unauthorized attempt."),
+            current_user=outsider, db=db,
+        )
+    assert exc.value.status_code == 404
+    assert db.query(PracticeAttempt).filter_by(question_id=question.id).count() == 0
+
+
+def test_report_without_evaluation_has_no_invented_score(db):
+    user = db.query(User).filter(User.email == "candidate.alpha@interviewlens.ai").first()
+    interview = interviews.create_interview(
+        InterviewCreate(title="Awaiting evaluation", consent_given=True),
+        current_user=user, db=db,
+    )
+    report = interviews.get_interview_report(interview.id, current_user=user, db=db)
+    assert report.overall_performance_score is None
+    pdf = exports.export_interview_pdf(interview.id, current_user=user, db=db)
+    assert b"Not evaluated" in pdf.body or pdf.status_code == 200
