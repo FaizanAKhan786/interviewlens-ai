@@ -95,7 +95,7 @@ def test_user_login(db):
 def test_demo_login_creates_senior_profile(db):
     res = auth.demo_login(db=db)
     assert res.user.email.startswith("demo-")
-    assert res.user.email.endswith("@interviewlens.invalid")
+    assert res.user.email.endswith("@example.com")
     assert "Alex Mercer" in res.user.full_name
     assert res.user.profile.target_role == "Senior AI/ML Engineer"
 
