@@ -1989,6 +1989,10 @@ function stopLiveRecording(targetContext) {
     mediaRecorder.stop();
   }
 }
+
+// The transcript tab needs its own render function. Without this declaration
+// the trailing template literal and closing brace break the entire SPA script.
+function renderSpeakerAssignmentTab(container, report) {
   container.innerHTML = `
     <div class="p-5 rounded-2xl glass-card border border-surface-border space-y-4">
       <div>
