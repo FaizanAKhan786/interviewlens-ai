@@ -92,4 +92,8 @@ python -m pytest tests/test_backend.py -c pytest.ini --rootdir . -v
 
 **Scope:** This is not an applicant-screening or hiring recommendation engine. Obtain the consent of everyone recorded, avoid uploading sensitive personal information into an unreviewed environment, and validate any model feedback independently.
 
+## Verification & benchmark protocol
+
+[Read the reproducible test and evaluation guide](docs/QUALITY.md). It documents the current automated checks, commands for model-dependent evaluations, and what results **do not** establish.
+
 [Issues](https://github.com/FaizanAKhan786/interviewlens-ai/issues) · [GitHub profile](https://github.com/FaizanAKhan786)
