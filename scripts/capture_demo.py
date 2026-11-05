@@ -15,8 +15,13 @@ with sync_playwright() as p:
     page.on("pageerror", lambda e: errors.append(str(e)))
     response = page.goto(BASE, wait_until="domcontentloaded", timeout=30000)
     assert response and response.status == 200
-    page.get_by_text("Turn Every Interview Into Your").first.wait_for(timeout=15000)
+    print("Browser page title:", page.title())
+    print("Landing heading count:", page.locator("#app-viewport h1").count())
+    print("Browser JS errors:", errors[:5])
+    page.locator("#app-viewport h1").first.wait_for(timeout=15000)
+    assert "Turn Every Interview" in page.locator("#app-viewport h1").first.inner_text()
     page.wait_for_timeout(1300)
+    print("Landing background:", page.evaluate("getComputedStyle(document.body).backgroundColor"))
 
     # Tailwind CDN is a runtime dependency in this version. Do not claim a
     # styled screenshot if the stylesheet was unreachable in the runner.
