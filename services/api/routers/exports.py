@@ -120,6 +120,21 @@ def export_interview_pdf(
     comm = db.query(CommunicationMetrics).filter(CommunicationMetrics.interview_id == interview.id).first()
     gaps = db.query(KnowledgeGap).filter(KnowledgeGap.interview_id == interview.id).all()
 
+    # Calculate the reported score from this interview's stored evaluations.
+    # An interview without evaluated answers has no numeric score.
+    evaluation_scores = [
+        ev.overall_score
+        for question in questions
+        for ev in db.query(AnswerEvaluation)
+        .filter(AnswerEvaluation.question_id == question.id)
+        .all()
+        if ev.overall_score is not None
+    ]
+    score_label = (
+        f"{int(sum(evaluation_scores) / len(evaluation_scores))} / 100"
+        if evaluation_scores else "Not evaluated"
+    )
+
     # Build PyMuPDF document
     doc = pymupdf.open()
     
@@ -142,7 +157,7 @@ def export_interview_pdf(
     # Overall Score Card
     p1.draw_rect(pymupdf.Rect(40, y, 555, y + 80), color=(0.9, 0.92, 0.96), fill=(0.95, 0.97, 1.0))
     p1.insert_text((60, y + 30), "Overall Coaching Assessment Score", fontsize=12, color=(0.2, 0.3, 0.5))
-    p1.insert_text((60, y + 62), "82 / 100", fontsize=26, color=(0.2, 0.4, 0.9))
+    p1.insert_text((60, y + 62), score_label, fontsize=24, color=(0.2, 0.4, 0.9))
     p1.insert_text((220, y + 35), "Rubric-grounded evaluation evaluating technical accuracy, completeness,", fontsize=9, color=(0.3, 0.35, 0.45))
     p1.insert_text((220, y + 52), "clarity of reasoning, and delivery pace against role benchmarks.", fontsize=9, color=(0.3, 0.35, 0.45))
     y += 105
@@ -203,6 +218,7 @@ def export_interview_pdf(
         y2 += 215
 
     pdf_bytes = doc.tobytes()
+    doc.close()
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
