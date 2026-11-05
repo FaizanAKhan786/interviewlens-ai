@@ -56,32 +56,36 @@ def login(login_in: UserLogin, db: Session = Depends(get_db)):
 
 @router.post("/demo-login", response_model=TokenResponse)
 def demo_login(db: Session = Depends(get_db)):
-    demo_email = "demo.candidate@interviewlens.ai"
-    user = db.query(User).filter(User.email == demo_email).first()
-    if not user:
-        user = User(
-            id=gen_uuid(),
-            email=demo_email,
-            full_name="Alex Mercer (Demo)",
-            hashed_password=hash_password("DemoPassword2026!"),
-            role="candidate"
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+    """Create a fresh isolated demo identity rather than sharing one public account.
 
-        profile = UserProfile(
-            id=gen_uuid(),
-            user_id=user.id,
-            target_role="Senior AI/ML Engineer",
-            target_company="OpenAI / Anthropic",
-            experience_level="senior",
-            bio="Senior engineer specializing in distributed LLM architectures, RAG systems, and high-throughput vector search pipelines."
-        )
-        db.add(profile)
-        db.commit()
-        db.refresh(user)
+    No credentials are published. Each demo session gets its own interview,
+    transcript and practice data. This remains a synthetic-data prototype:
+    demo accounts require a retention/cleanup policy before public deployment.
+    """
+    from secrets import token_urlsafe
 
+    session_id = gen_uuid()
+    demo_email = f"demo-{session_id}@interviewlens.invalid"
+    user = User(
+        id=session_id,
+        email=demo_email,
+        full_name="Alex Mercer (Demo)",
+        hashed_password=hash_password(token_urlsafe(32)),
+        role="candidate",
+    )
+    db.add(user)
+    db.flush()
+    profile = UserProfile(
+        id=gen_uuid(),
+        user_id=user.id,
+        target_role="Senior AI/ML Engineer",
+        target_company="Example Company (Demo)",
+        experience_level="senior",
+        bio="Synthetic demo persona for exploring a sample AI engineering interview.",
+    )
+    db.add(profile)
+    db.commit()
+    db.refresh(user)
     token = create_access_token({"sub": user.id, "email": user.email})
     return TokenResponse(access_token=token, user=user)
 
