@@ -33,4 +33,4 @@ jobs:
 
       - name: Execute Automated Pytest Suite
         run: |
-          pytest tests/test_backend.py -c pytest.ini --rootdir . -v
+          python -m pytest tests/test_backend.py -c pytest.ini --rootdir . -v
