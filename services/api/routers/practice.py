@@ -55,7 +55,14 @@ def submit_practice_attempt(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    question = db.query(PracticeQuestion).filter(PracticeQuestion.id == attempt_in.question_id).first()
+    question = (
+        db.query(PracticeQuestion)
+        .filter(
+            PracticeQuestion.id == attempt_in.question_id,
+            (PracticeQuestion.user_id == current_user.id) | PracticeQuestion.user_id.is_(None),
+        )
+        .first()
+    )
     if not question:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Practice question not found")
 
