@@ -1168,7 +1168,7 @@ async function renderReport(container, interviewId) {
           <div class="flex items-center gap-3">
             <div class="px-3.5 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center gap-2">
               <span class="text-xs text-indigo-300">Coaching Score:</span>
-              <span class="text-lg font-bold text-white">${report.overall_performance_score}/100</span>
+              <span class="text-lg font-bold text-white">${report.overall_performance_score == null ? 'Not evaluated' : report.overall_performance_score + '/100'}</span>
             </div>
             <button onclick="downloadPdfReport('${report.interview.id}')" class="px-3.5 py-2 rounded-lg bg-surface-elevated hover:bg-surface-subtle text-slate-200 border border-surface-border text-xs font-semibold transition flex items-center gap-1.5">
               <i data-lucide="file-down" class="w-4 h-4 text-rose-400"></i> Export PDF
