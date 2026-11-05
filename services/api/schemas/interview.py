@@ -182,7 +182,7 @@ class ReportOut(BaseModel):
     visual: Optional[VisualObservationsOut] = None
     knowledge_gaps: List[KnowledgeGapOut] = []
     learning_plan: Optional[LearningPlanOut] = None
-    overall_performance_score: int
+    overall_performance_score: Optional[int] = None
     primary_strengths: List[str]
     critical_improvement_areas: List[str]
 
