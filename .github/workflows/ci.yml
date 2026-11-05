@@ -31,6 +31,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Check actual browser JavaScript syntax
+        run: node --check services/api/static/app.js
+
       - name: Execute Automated Pytest Suite
         run: |
           python -m pytest tests/test_backend.py -c pytest.ini --rootdir . -v
