@@ -65,7 +65,7 @@ def demo_login(db: Session = Depends(get_db)):
     from secrets import token_urlsafe
 
     session_id = gen_uuid()
-    demo_email = f"demo-{session_id}@interviewlens.invalid"
+    demo_email = f"demo-{session_id}@example.com"
     user = User(
         id=session_id,
         email=demo_email,
