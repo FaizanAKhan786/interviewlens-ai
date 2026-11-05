@@ -94,9 +94,17 @@ def test_user_login(db):
 
 def test_demo_login_creates_senior_profile(db):
     res = auth.demo_login(db=db)
-    assert res.user.email == "demo.candidate@interviewlens.ai"
+    assert res.user.email.startswith("demo-")
+    assert res.user.email.endswith("@interviewlens.invalid")
     assert "Alex Mercer" in res.user.full_name
     assert res.user.profile.target_role == "Senior AI/ML Engineer"
+
+    # No two visitors should share access to one demo account.
+    other = auth.demo_login(db=db)
+    assert other.user.id != res.user.id
+    assert other.user.email != res.user.email
+    assert decode_access_token(res.access_token)["sub"] == res.user.id
+    assert decode_access_token(other.access_token)["sub"] == other.user.id
 
 # 3. Profile Updates
 def test_update_profile(db):
