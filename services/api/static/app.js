@@ -220,7 +220,7 @@ function renderLanding(container) {
                 <span class="ml-2 text-xs font-mono text-slate-400">InterviewLens AI / Senior AI Engineer Assessment</span>
               </div>
               <div class="flex items-center space-x-2">
-                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Score: 82/100</span>
+                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">Illustrative score: 82/100</span>
               </div>
             </div>
 
@@ -401,7 +401,7 @@ function renderLanding(container) {
               <div class="flex justify-center text-indigo-500">↓</div>
               <div class="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/30 flex items-center justify-between">
                 <span class="text-slate-400">4. Practice Re-Record:</span>
-                <span class="text-emerald-300 font-bold">+18 pts (Score: 92/100)</span>
+                <span class="text-emerald-300 font-bold">Illustrative: +18 pts (92/100)</span>
               </div>
             </div>
           </div>
@@ -2665,7 +2665,10 @@ function showToast(message, type = 'info') {
   };
 
   toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl border shadow-xl text-xs font-medium backdrop-blur-md transition-all duration-300 transform translate-y-2 opacity-0 flex items-center gap-2 ${colors[type] || colors.info}`;
-  toast.innerHTML = `<span>${message}</span>`;
+  // Do not interpret server, provider or browser error messages as HTML.
+  const toastText = document.createElement('span');
+  toastText.textContent = String(message);
+  toast.appendChild(toastText);
   container.appendChild(toast);
 
   requestAnimationFrame(() => {
