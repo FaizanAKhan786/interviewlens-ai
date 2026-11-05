@@ -43,6 +43,28 @@ from services.api.services.resume_parser import ResumeParserService
 
 router = APIRouter(prefix="/interviews", tags=["Interviews"])
 
+async def _write_upload_bounded(file: UploadFile, destination: str, max_bytes: int) -> int:
+    """Stream uploads with an enforced byte limit and clean up partial files."""
+    length = 0
+    try:
+        with open(destination, "xb") as buffer:
+            while chunk := await file.read(1024 * 1024):
+                length += len(chunk)
+                if length > max_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"Upload exceeds the maximum permitted size ({max_bytes} bytes)",
+                    )
+                buffer.write(chunk)
+        if length == 0:
+            raise HTTPException(status_code=400, detail="Empty uploads are not supported")
+        return length
+    except BaseException:
+        if os.path.exists(destination):
+            os.remove(destination)
+        raise
+
+
 @router.post("", response_model=InterviewOut, status_code=status.HTTP_201_CREATED)
 def create_interview(
     interview_in: InterviewCreate,
@@ -152,21 +174,29 @@ async def upload_resume(
     if not interview:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview not found")
 
-    if not file.filename.lower().endswith(('.pdf', '.txt')):
+    filename = os.path.basename((file.filename or "").replace("\\", "/"))
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext not in {"pdf", "txt"}:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Unsupported format. Please upload a PDF or TXT resume."
         )
 
-    save_path = os.path.join(settings.STORAGE_DIR, f"resume_{interview.id}_{file.filename}")
-    with open(save_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    if file.filename.lower().endswith('.pdf'):
-        resume_text = ResumeParserService.extract_text_from_pdf(save_path)
-    else:
-        with open(save_path, "r", encoding="utf-8", errors="ignore") as f:
-            resume_text = f.read()
+    # Generate a server-side storage name; never concatenate a client filename
+    # into a path. Remove temporary resumes after extracting the text.
+    resume_dir = os.path.join(settings.STORAGE_DIR, "resumes")
+    os.makedirs(resume_dir, exist_ok=True)
+    save_path = os.path.join(resume_dir, f"{gen_uuid()}.{ext}")
+    try:
+        await _write_upload_bounded(file, save_path, 5 * 1024 * 1024)
+        if ext == "pdf":
+            resume_text = ResumeParserService.extract_text_from_pdf(save_path)
+        else:
+            with open(save_path, "r", encoding="utf-8", errors="ignore") as source:
+                resume_text = source.read()
+    finally:
+        if os.path.exists(save_path):
+            os.remove(save_path)
 
     # Save to user profile
     if current_user.profile:
@@ -191,7 +221,7 @@ async def upload_resume(
 
     return {
         "message": "Resume uploaded and analyzed successfully",
-        "file_name": file.filename,
+        "file_name": filename,
         "alignment": alignment
     }
 
@@ -211,11 +241,9 @@ def get_resume_alignment(
 
     resume_text = current_user.profile.resume_text if current_user.profile else ""
     if not resume_text:
-        # Default representative senior AI resume data if none uploaded
-        resume_text = (
-            "Senior AI Engineer with 6 years experience in Python, PyTorch, Transformers, "
-            "Distributed Systems, Kafka, Redis, PostgreSQL, Docker, Kubernetes, and Vector Search (Pinecone, Chroma). "
-            "Led production deployments of large language model architectures and RAG pipelines."
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No resume uploaded yet. Upload a PDF or TXT resume before requesting alignment."
         )
 
     answers = [
@@ -251,26 +279,27 @@ async def upload_recording(
     if not interview:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview not found")
 
-    ext = file.filename.split('.')[-1].lower() if '.' in file.filename else ''
+    filename = os.path.basename((file.filename or "").replace("\\", "/"))
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext not in settings.ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported format .{ext}. Permitted formats: {', '.join(settings.ALLOWED_EXTENSIONS)}"
         )
 
-    # Save file
-    filename = f"{interview.id}_{file.filename}"
-    save_path = os.path.join(settings.STORAGE_DIR, "recordings", filename)
-    
-    with open(save_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    file_size = os.path.getsize(save_path)
+    # Store under a generated name and enforce the limit while streaming.
+    # An untrusted filename must never be able to select a filesystem path.
+    upload_dir = os.path.join(settings.STORAGE_DIR, "recordings")
+    os.makedirs(upload_dir, exist_ok=True)
+    save_path = os.path.join(upload_dir, f"{interview.id}_{gen_uuid()}.{ext}")
+    file_size = await _write_upload_bounded(
+        file, save_path, settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    )
     is_video = ext in ["mp4", "mov", "webm"]
 
     existing_file = db.query(InterviewFile).filter(InterviewFile.interview_id == interview.id).first()
     if existing_file:
-        existing_file.file_name = file.filename
+        existing_file.file_name = filename
         existing_file.file_size_bytes = file_size
         existing_file.storage_path = save_path
         existing_file.is_video = is_video
@@ -278,7 +307,7 @@ async def upload_recording(
         file_record = InterviewFile(
             id=gen_uuid(),
             interview_id=interview.id,
-            file_name=file.filename,
+            file_name=filename,
             file_size_bytes=file_size,
             storage_path=save_path,
             mime_type=file.content_type or "application/octet-stream",
@@ -294,7 +323,7 @@ async def upload_recording(
 
     return {
         "message": "File uploaded successfully. Processing started.",
-        "file_name": file.filename,
+        "file_name": filename,
         "size_bytes": file_size,
         "is_video": is_video
     }
@@ -414,7 +443,7 @@ def get_interview_report(
     gaps = db.query(KnowledgeGap).filter(KnowledgeGap.interview_id == interview.id).all()
     plan = db.query(LearningPlan).filter(LearningPlan.interview_id == interview.id).first()
 
-    avg_score = int(sum(overall_scores) / len(overall_scores)) if overall_scores else 78
+    avg_score = int(sum(overall_scores) / len(overall_scores)) if overall_scores else None
 
     return ReportOut(
         interview=_to_interview_out(interview),
@@ -424,12 +453,8 @@ def get_interview_report(
         knowledge_gaps=[KnowledgeGapOut.model_validate(g) for g in gaps],
         learning_plan=LearningPlanOut.model_validate(plan) if plan else None,
         overall_performance_score=avg_score,
-        primary_strengths=list(dict.fromkeys(strengths_all))[:4] or [
-            "Good architectural framing", "Clear explanation of baseline components"
-        ],
-        critical_improvement_areas=list(dict.fromkeys(missing_all))[:4] or [
-            "Quantitative evaluation metrics", "Distributed resilience patterns"
-        ]
+        primary_strengths=list(dict.fromkeys(strengths_all))[:4],
+        critical_improvement_areas=list(dict.fromkeys(missing_all))[:4]
     )
 
 @router.post("/seed-demo", response_model=InterviewOut)
