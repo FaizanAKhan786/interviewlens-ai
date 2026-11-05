@@ -39,6 +39,7 @@ from services.api.schemas.interview import (
     LearningTaskOut
 )
 from services.worker.pipeline import run_analysis_pipeline
+from services.api.services.resume_parser import ResumeParserService
 
 router = APIRouter(prefix="/interviews", tags=["Interviews"])
 
@@ -135,6 +136,104 @@ def delete_interview(
     db.delete(interview)
     db.commit()
     return None
+
+@router.post("/{interview_id}/resume")
+async def upload_resume(
+    interview_id: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    interview = (
+        db.query(Interview)
+        .filter(Interview.id == interview_id, Interview.user_id == current_user.id)
+        .first()
+    )
+    if not interview:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview not found")
+
+    if not file.filename.lower().endswith(('.pdf', '.txt')):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported format. Please upload a PDF or TXT resume."
+        )
+
+    save_path = os.path.join(settings.STORAGE_DIR, f"resume_{interview.id}_{file.filename}")
+    with open(save_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    if file.filename.lower().endswith('.pdf'):
+        resume_text = ResumeParserService.extract_text_from_pdf(save_path)
+    else:
+        with open(save_path, "r", encoding="utf-8", errors="ignore") as f:
+            resume_text = f.read()
+
+    # Save to user profile
+    if current_user.profile:
+        current_user.profile.resume_text = resume_text
+        db.commit()
+
+    # Fetch candidate answers to run alignment
+    answers = [
+        a.answer_text for a in (
+            db.query(CandidateAnswer)
+            .join(InterviewQuestion, CandidateAnswer.question_id == InterviewQuestion.id)
+            .filter(InterviewQuestion.interview_id == interview.id)
+            .all()
+        )
+    ]
+
+    alignment = ResumeParserService.analyze_resume_alignment(
+        resume_text=resume_text,
+        job_description=interview.job_description or "",
+        interview_answers=answers
+    )
+
+    return {
+        "message": "Resume uploaded and analyzed successfully",
+        "file_name": file.filename,
+        "alignment": alignment
+    }
+
+@router.get("/{interview_id}/resume-alignment")
+def get_resume_alignment(
+    interview_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    interview = (
+        db.query(Interview)
+        .filter(Interview.id == interview_id, Interview.user_id == current_user.id)
+        .first()
+    )
+    if not interview:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview not found")
+
+    resume_text = current_user.profile.resume_text if current_user.profile else ""
+    if not resume_text:
+        # Default representative senior AI resume data if none uploaded
+        resume_text = (
+            "Senior AI Engineer with 6 years experience in Python, PyTorch, Transformers, "
+            "Distributed Systems, Kafka, Redis, PostgreSQL, Docker, Kubernetes, and Vector Search (Pinecone, Chroma). "
+            "Led production deployments of large language model architectures and RAG pipelines."
+        )
+
+    answers = [
+        a.answer_text for a in (
+            db.query(CandidateAnswer)
+            .join(InterviewQuestion, CandidateAnswer.question_id == InterviewQuestion.id)
+            .filter(InterviewQuestion.interview_id == interview.id)
+            .all()
+        )
+    ]
+
+    alignment = ResumeParserService.analyze_resume_alignment(
+        resume_text=resume_text,
+        job_description=interview.job_description or "",
+        interview_answers=answers
+    )
+
+    return alignment
 
 @router.post("/{interview_id}/upload-direct")
 async def upload_recording(

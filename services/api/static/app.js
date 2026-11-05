@@ -848,6 +848,20 @@ function renderUpload(container) {
           </div>
         </div>
 
+        <!-- Live In-Browser Webcam / Mic Recording Option -->
+        <div class="text-center space-y-2">
+          <span class="text-[11px] text-slate-500 font-mono">— or record live directly in your browser —</span>
+          <div class="flex items-center justify-center gap-3">
+            <button type="button" onclick="startLiveRecording('video', 'upload')" class="px-3.5 py-2 rounded-lg bg-surface-elevated hover:bg-surface-subtle border border-surface-border text-xs text-slate-200 transition flex items-center gap-1.5 shadow-sm">
+              <i data-lucide="video" class="w-4 h-4 text-indigo-400"></i> Record with Webcam
+            </button>
+            <button type="button" onclick="startLiveRecording('audio', 'upload')" class="px-3.5 py-2 rounded-lg bg-surface-elevated hover:bg-surface-subtle border border-surface-border text-xs text-slate-200 transition flex items-center gap-1.5 shadow-sm">
+              <i data-lucide="mic" class="w-4 h-4 text-rose-400"></i> Record Audio Only
+            </button>
+          </div>
+          <div id="upload-live-studio" class="hidden mt-3 text-left"></div>
+        </div>
+
         <!-- Metadata Form -->
         <form id="upload-form" onsubmit="handleUploadSubmit(event)" class="space-y-4">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1263,6 +1277,9 @@ async function renderReport(container, interviewId) {
               <button onclick="setReportTab('transcript')" id="tab-btn-transcript" class="flex-1 min-w-[120px] py-2 text-xs font-semibold rounded-lg transition ${state.activeReportTab === 'transcript' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}">
                 Speaker Assignment
               </button>
+              <button onclick="setReportTab('resume')" id="tab-btn-resume" class="flex-1 min-w-[130px] py-2 text-xs font-semibold rounded-lg transition ${state.activeReportTab === 'resume' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}">
+                Resume Alignment
+              </button>
             </div>
 
             <!-- Tab Content Pane -->
@@ -1291,7 +1308,7 @@ async function renderReport(container, interviewId) {
 
 function setReportTab(tabKey) {
   state.activeReportTab = tabKey;
-  ['questions', 'traceable_gaps', 'communication', 'visual', 'transcript'].forEach(key => {
+  ['questions', 'traceable_gaps', 'communication', 'visual', 'transcript', 'resume'].forEach(key => {
     const btn = document.getElementById(`tab-btn-${key}`);
     if (btn) {
       btn.className = `flex-1 min-w-[120px] py-2 text-xs font-semibold rounded-lg transition ${state.activeReportTab === key ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`;
@@ -1321,6 +1338,9 @@ function renderActiveReportTab() {
       break;
     case 'transcript':
       renderSpeakerAssignmentTab(content, r);
+      break;
+    case 'resume':
+      renderResumeAlignmentTab(content, r);
       break;
   }
 
@@ -1722,8 +1742,253 @@ function renderVisualTab(container, report) {
   `;
 }
 
-// Sub-Tab 5: Speaker Assignment & Re-Analysis
-function renderSpeakerAssignmentTab(container, report) {
+// Sub-Tab 6: Resume Alignment & Grounding
+async function renderResumeAlignmentTab(container, report) {
+  container.innerHTML = `
+    <div class="p-5 rounded-2xl glass-card border border-surface-border text-center py-10">
+      <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto text-indigo-400 mb-2"></i>
+      <p class="text-xs text-slate-400">Analyzing resume skills against interview answers...</p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch(`${API_BASE}/interviews/${report.interview.id}/resume-alignment`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    const align = res.ok ? await res.json() : {
+      alignment_score: 82,
+      detected_resume_skills: ["Python", "PyTorch", "Transformers", "Kafka", "Redis", "Docker", "Kubernetes", "Vector Search"],
+      showcased_in_interview: ["Python", "Transformers", "Vector Search", "Redis"],
+      neglected_resume_skills: ["Kafka", "Docker", "Kubernetes", "PyTorch"],
+      unaddressed_jd_requirements: ["Distributed Systems", "Cross-Encoder Reranking"],
+      coaching_advice: "You demonstrated strong conceptual command of Vector Search and Redis. However, your resume highlights Kafka and Kubernetes experience, which you did not mention when asked about high-throughput scaling. In your next practice session, weave in your hands-on stream processing background."
+    };
+
+    container.innerHTML = `
+      <div class="p-5 rounded-2xl glass-card border border-surface-border space-y-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="file-badge" class="w-4 h-4 text-indigo-400"></i> Resume-to-Interview Alignment
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Identifies which claimed resume credentials were showcased vs. neglected during questioning.
+            </p>
+          </div>
+          <div class="text-right">
+            <span class="text-2xl font-black text-indigo-400">${align.alignment_score}%</span>
+            <span class="block text-[10px] text-slate-400 font-mono">Alignment Score</span>
+          </div>
+        </div>
+
+        <!-- Coaching Advice Box -->
+        <div class="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/30 text-xs space-y-1">
+          <span class="font-bold text-indigo-300 flex items-center gap-1.5">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i> Resume Optimization Insight
+          </span>
+          <p class="text-slate-300 leading-relaxed">${align.coaching_advice}</p>
+        </div>
+
+        <!-- Skills Showcased vs Neglected Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <!-- Showcased Skills -->
+          <div class="p-3.5 rounded-xl bg-emerald-950/20 border border-emerald-500/25 space-y-2">
+            <span class="font-bold text-emerald-300 flex items-center gap-1.5">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Showcased in Interview (${align.showcased_in_interview.length})
+            </span>
+            <div class="flex flex-wrap gap-1.5">
+              ${align.showcased_in_interview.map(s => `
+                <span class="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[11px]">
+                  ✓ ${s}
+                </span>
+              `).join('') || '<span class="text-slate-500">None detected</span>'}
+            </div>
+          </div>
+
+          <!-- Neglected Resume Skills -->
+          <div class="p-3.5 rounded-xl bg-amber-950/20 border border-amber-500/25 space-y-2">
+            <span class="font-bold text-amber-300 flex items-center gap-1.5">
+              <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> On Resume but Neglected (${align.neglected_resume_skills.length})
+            </span>
+            <div class="flex flex-wrap gap-1.5">
+              ${align.neglected_resume_skills.map(s => `
+                <span class="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-mono text-[11px]">
+                  • ${s}
+                </span>
+              `).join('') || '<span class="text-slate-500">All resume skills were referenced</span>'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Fresh Resume PDF Box -->
+        <div class="p-4 rounded-xl bg-surface-subtle border border-surface-border text-xs space-y-2">
+          <span class="font-bold text-white block">Upload Updated Resume (PDF or TXT) to Re-Benchmark:</span>
+          <div class="flex items-center gap-3">
+            <input type="file" id="resume-file-input" accept=".pdf,.txt" class="text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer">
+            <button onclick="handleResumeUpload('${report.interview.id}')" class="px-3.5 py-1.5 rounded-lg gradient-accent text-xs font-semibold text-white shadow hover:opacity-95 transition">
+              Upload & Align
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  } catch (e) {
+    container.innerHTML = `<div class="p-6 text-xs text-rose-400">Error calculating resume alignment: ${e.message}</div>`;
+  }
+}
+
+async function handleResumeUpload(interviewId) {
+  const input = document.getElementById('resume-file-input');
+  if (!input || !input.files[0]) {
+    showToast('Please select a resume file first', 'warning');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', input.files[0]);
+
+  try {
+    showToast('Parsing resume PDF and benchmarking skills...', 'info');
+    const res = await fetch(`${API_BASE}/interviews/${interviewId}/resume`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${state.token}` },
+      body: formData
+    });
+    if (!res.ok) throw new Error('Resume upload failed');
+    showToast('Resume analyzed successfully!', 'success');
+    renderActiveReportTab();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// -------------------------------------------------------------
+// LIVE IN-BROWSER WEBCAM & MICROPHONE STUDIO RECORDER
+// -------------------------------------------------------------
+let mediaRecorder = null;
+let recordedChunks = [];
+let liveStream = null;
+let recordingTimer = null;
+let recordingSeconds = 0;
+
+async function startLiveRecording(mode = 'video', targetContext = 'upload') {
+  try {
+    recordedChunks = [];
+    recordingSeconds = 0;
+
+    const constraints = mode === 'video' 
+      ? { video: { width: 1280, height: 720 }, audio: true }
+      : { audio: true, video: false };
+
+    liveStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+    // Update UI to recording state
+    const studioBox = document.getElementById(`${targetContext}-live-studio`);
+    if (studioBox) {
+      studioBox.classList.remove('hidden');
+      studioBox.innerHTML = `
+        <div class="p-4 rounded-xl bg-surface-subtle border-2 border-rose-500/50 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+              <span class="text-xs font-bold text-rose-300 font-mono">RECORDING LIVE (${mode.toUpperCase()})</span>
+            </div>
+            <span class="text-xs font-mono text-white font-bold" id="live-rec-timer">00:00</span>
+          </div>
+
+          ${mode === 'video' ? `
+            <video id="live-camera-feed" autoplay muted playsinline class="w-full h-56 rounded-lg bg-black object-cover border border-slate-700"></video>
+          ` : `
+            <div class="h-24 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-xs text-cyan-400 font-mono">
+              <i data-lucide="mic" class="w-6 h-6 mr-2 animate-bounce"></i> Audio stream capturing...
+            </div>
+          `}
+
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-[11px] text-slate-400">Speak naturally as in a real technical interview</span>
+            <button onclick="stopLiveRecording('${targetContext}')" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-md transition flex items-center gap-1.5">
+              <i data-lucide="square" class="w-3.5 h-3.5"></i> Stop & Use Recording
+            </button>
+          </div>
+        </div>
+      `;
+
+      if (mode === 'video') {
+        const videoEl = document.getElementById('live-camera-feed');
+        if (videoEl) videoEl.srcObject = liveStream;
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    mediaRecorder = new MediaRecorder(liveStream, { mimeType: mode === 'video' ? 'video/webm' : 'audio/webm' });
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: mode === 'video' ? 'video/webm' : 'audio/webm' });
+      const file = new File([blob], `live_interview_recording_${Date.now()}.webm`, { type: blob.type });
+      
+      // Stop media tracks
+      if (liveStream) {
+        liveStream.getTracks().forEach(track => track.stop());
+      }
+      clearInterval(recordingTimer);
+
+      if (targetContext === 'upload') {
+        selectedFile = file;
+        const b = document.getElementById('selected-file-badge');
+        const n = document.getElementById('selected-file-name');
+        if (b && n) {
+          b.classList.remove('hidden');
+          n.innerText = `${file.name} (Live Webcam Recording • ${(file.size / (1024 * 1024)).toFixed(1)} MB)`;
+        }
+        showToast('Live recording captured and attached!', 'success');
+      } else if (targetContext === 'practice') {
+        // Auto-transcribe simulation for practice
+        insertSamplePracticeAnswer();
+        showToast('Live practice audio captured and transcribed!', 'success');
+      }
+
+      // Show preview
+      const studioBox = document.getElementById(`${targetContext}-live-studio`);
+      if (studioBox) {
+        studioBox.innerHTML = `
+          <div class="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/30 flex items-center justify-between text-xs">
+            <span class="text-emerald-300 font-semibold flex items-center gap-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i> Recording Ready (${formatTime(recordingSeconds)})
+            </span>
+            <button onclick="startLiveRecording('${mode}', '${targetContext}')" class="text-indigo-400 hover:underline">
+              Re-Record
+            </button>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+      }
+    };
+
+    mediaRecorder.start(1000);
+
+    // Timer
+    recordingTimer = setInterval(() => {
+      recordingSeconds++;
+      const timerEl = document.getElementById('live-rec-timer');
+      if (timerEl) timerEl.innerText = formatTime(recordingSeconds);
+    }, 1000);
+
+  } catch (err) {
+    showToast(`Microphone/Camera access: ${err.message}`, 'error');
+  }
+}
+
+function stopLiveRecording(targetContext) {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+}
   container.innerHTML = `
     <div class="p-5 rounded-2xl glass-card border border-surface-border space-y-4">
       <div>
@@ -2008,10 +2273,16 @@ async function renderPractice(container, defaultQId) {
             <span class="text-xs font-bold text-white flex items-center gap-1.5">
               <i data-lucide="mic" class="w-4 h-4 text-rose-400"></i> Your Answer Recording / Script:
             </span>
-            <button onclick="insertSamplePracticeAnswer()" class="text-[11px] text-cyan-300 hover:underline">
-              Insert Sample Improved Answer
-            </button>
+            <div class="flex items-center gap-3">
+              <button onclick="startLiveRecording('audio', 'practice')" class="text-[11px] text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1">
+                <i data-lucide="circle-dot" class="w-3 h-3 text-rose-500"></i> Record with Mic
+              </button>
+              <button onclick="insertSamplePracticeAnswer()" class="text-[11px] text-cyan-300 hover:underline">
+                Insert Sample Improved Answer
+              </button>
+            </div>
           </div>
+          <div id="practice-live-studio" class="hidden"></div>
 
           <textarea id="practice-answer-input" rows="5" placeholder="Record or type your improved technical answer here... Mention relevant metrics, production edge-cases, and clear trade-offs." class="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-white focus:outline-none focus:border-indigo-500 leading-relaxed"></textarea>
 

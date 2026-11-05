@@ -293,7 +293,39 @@ def test_report_exports(db):
     assert pdf_resp.media_type == "application/pdf"
     assert len(pdf_resp.body) > 1000  # Valid multi-page PDF
 
-# 11. Interview Deletion & Data Retention
+# 11. Resume Parser & Alignment Tests
+def test_resume_parser_and_alignment(db):
+    user = db.query(User).filter(User.email == "candidate.alpha@interviewlens.ai").first()
+    inv = db.query(Interview).filter(Interview.user_id == user.id, Interview.status == "completed").first()
+
+    from services.api.services.resume_parser import ResumeParserService
+
+    sample_resume = (
+        "Experienced AI Engineer with skills in Python, PyTorch, Docker, Kubernetes, Kafka, Redis, "
+        "PostgreSQL, Vector Search (Pinecone), and LLM architectures. Designed high-throughput microservices."
+    )
+    skills = ResumeParserService.extract_skills(sample_resume)
+    assert "Python" in skills
+    assert "Kafka" in skills
+    assert "Docker" in skills
+
+    # Check alignment against RAG answers
+    answers = ["I implemented embeddings with Pinecone and Redis caching for our vector search queries."]
+    align = ResumeParserService.analyze_resume_alignment(
+        resume_text=sample_resume,
+        job_description="Seeking AI Engineer with Python, Kafka, and Kubernetes expertise.",
+        interview_answers=answers
+    )
+    assert align["alignment_score"] > 50
+    assert "Redis" in align["showcased_in_interview"] or "Python" in align["showcased_in_interview"]
+    assert "Kafka" in align["neglected_resume_skills"] or "Kubernetes" in align["neglected_resume_skills"]
+
+    # Verify endpoint
+    res = interviews.get_resume_alignment(inv.id, current_user=user, db=db)
+    assert res["alignment_score"] > 50
+    assert len(res["detected_resume_skills"]) > 0
+
+# 12. Interview Deletion & Data Retention
 def test_interview_deletion(db):
     user = db.query(User).filter(User.email == "candidate.alpha@interviewlens.ai").first()
     temp_inv = interviews.create_interview(
