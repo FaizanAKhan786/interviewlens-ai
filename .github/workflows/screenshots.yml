@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/screenshots.yml'
       - 'scripts/capture_demo.py'
+      - 'services/api/static/app.js'
   workflow_dispatch:
 
 permissions:
