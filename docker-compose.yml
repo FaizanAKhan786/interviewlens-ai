@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # Managed Application API
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+    container_name: interviewlens_api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://interviewlens:interviewlens_secret@postgres:5432/interviewlens_db
+      - REDIS_URL=redis://redis:6379/0
+      - STORAGE_DIR=/app/storage
+      - AI_PROVIDER=local
+      - SECRET_KEY=interviewlens_super_secret_jwt_key_2026
+    volumes:
+      - storage_data:/app/storage
+    depends_on:
+      - postgres
+      - redis
+
+  # Asynchronous Background Worker
+  worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.worker
+    container_name: interviewlens_worker
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://interviewlens:interviewlens_secret@postgres:5432/interviewlens_db
+      - REDIS_URL=redis://redis:6379/0
+      - STORAGE_DIR=/app/storage
+      - AI_PROVIDER=local
+    volumes:
+      - storage_data:/app/storage
+    depends_on:
+      - postgres
+      - redis
+
+  # PostgreSQL Relational Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: interviewlens_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: interviewlens
+      POSTGRES_PASSWORD: interviewlens_secret
+      POSTGRES_DB: interviewlens_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Redis In-Memory Task Queue & Cache
+  redis:
+    image: redis:7-alpine
+    container_name: interviewlens_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # S3-Compatible Local Storage (MinIO)
+  minio:
+    image: minio/minio:latest
+    container_name: interviewlens_minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin_secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  storage_data:

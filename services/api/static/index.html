@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InterviewLens AI — Every interview makes you better.</title>
+  <meta name="description" content="AI-powered interview intelligence and personalized career coaching platform for technical candidates.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            background: '#090D16',
+            surface: {
+              DEFAULT: '#0F172A',
+              subtle: '#151F36',
+              elevated: '#1E293B',
+              border: 'rgba(255, 255, 255, 0.08)',
+            },
+            accent: {
+              DEFAULT: '#6366F1',
+              hover: '#4F46E5',
+              glow: 'rgba(99, 102, 241, 0.25)',
+              cyan: '#06B6D4',
+              emerald: '#10B981',
+              amber: '#F59E0B',
+              rose: '#F43F5E',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar and sleek styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #090D16; }
+    ::-webkit-scrollbar-thumb { background: #27354E; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3B82F6; }
+    
+    .glass-card {
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-glow {
+      box-shadow: 0 0 35px -5px rgba(99, 102, 241, 0.18);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #FFFFFF 0%, #94A3B8 60%, #6366F1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .gradient-accent {
+      background: linear-gradient(135deg, #6366F1 0%, #3B82F6 50%, #06B6D4 100%);
+    }
+    .pulse-glow {
+      animation: pulseGlow 2.5s infinite ease-in-out;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.85; }
+    }
+  </style>
+</head>
+<body class="bg-background text-slate-100 min-h-screen font-sans antialiased selection:bg-indigo-500 selection:text-white flex flex-col">
+
+  <!-- TOP NAVIGATION BAR -->
+  <nav class="sticky top-0 z-50 border-b border-surface-border bg-background/85 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateTo('landing')">
+        <div class="w-10 h-10 rounded-xl gradient-accent flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i data-lucide="scan-face" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <span class="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
+            Interview<span class="text-indigo-400">Lens</span>
+            <span class="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">AI</span>
+          </span>
+          <p class="text-[10px] text-slate-400 -mt-0.5 hidden sm:block">Every interview makes you better.</p>
+        </div>
+      </div>
+
+      <!-- Center Nav Links -->
+      <div class="hidden md:flex items-center space-x-1" id="nav-center-links">
+        <button onclick="navigateTo('dashboard')" class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-surface-elevated transition flex items-center gap-1.5">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+        </button>
+        <button onclick="navigateTo('upload')" class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-surface-elevated transition flex items-center gap-1.5">
+          <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload Recording
+        </button>
+        <button onclick="navigateTo('learning')" class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-surface-elevated transition flex items-center gap-1.5">
+          <i data-lucide="graduation-cap" class="w-4 h-4"></i> Study Roadmap
+        </button>
+        <button onclick="navigateTo('practice')" class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-surface-elevated transition flex items-center gap-1.5">
+          <i data-lucide="mic" class="w-4 h-4"></i> Practice Studio
+        </button>
+        <button onclick="navigateTo('history')" class="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-surface-elevated transition flex items-center gap-1.5">
+          <i data-lucide="history" class="w-4 h-4"></i> History
+        </button>
+      </div>
+
+      <!-- Right User Controls -->
+      <div class="flex items-center space-x-3">
+        <!-- Demo Mode Badge / Switch -->
+        <button onclick="handleQuickDemo()" class="px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span>Instant Demo</span>
+        </button>
+
+        <div id="auth-controls" class="flex items-center space-x-2">
+          <!-- Populated by JS based on login state -->
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN APPLICATION CONTENT CONTAINER -->
+  <main class="flex-grow" id="app-viewport">
+    <!-- Active view dynamically injected here -->
+  </main>
+
+  <!-- NOTIFICATION TOAST CONTAINER -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- LOAD APP LOGIC -->
+  <script src="/static/app.js"></script>
+</body>
+</html>

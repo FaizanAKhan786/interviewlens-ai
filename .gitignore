@@ -1,0 +1,41 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Database & SQLite
+*.db
+*.sqlite
+*.sqlite3
+test_interviewlens.db
+
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# Media Storage (keep folders, ignore uploaded recordings)
+storage/recordings/*
+storage/exports/*
+!storage/recordings/.gitkeep
+!storage/exports/.gitkeep
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
