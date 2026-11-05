@@ -6,6 +6,8 @@ on:
       - '.github/workflows/screenshots.yml'
       - 'scripts/capture_demo.py'
       - 'services/api/static/app.js'
+      - 'services/api/routers/auth.py'
+      - 'services/api/routers/interviews.py'
   workflow_dispatch:
 
 permissions:
