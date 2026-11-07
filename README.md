@@ -8,9 +8,11 @@
 
 **Recorded interview analysis · Structured feedback · Speech metrics · Study plans**
 
+[![CI Test Suite](https://github.com/FaizanAKhan786/interviewlens-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/FaizanAKhan786/interviewlens-ai/actions)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Portfolio%20Prototype-7C3AED)
+[![Version](https://img.shields.io/badge/Version-v1.1.0-indigo.svg)](https://github.com/FaizanAKhan786/interviewlens-ai/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 
 [Quick start](#quick-start) · [Architecture](#architecture) · [Coaching workflow](#coaching-workflow) · [Technical architecture](docs/architecture/overview.md)
 
@@ -18,25 +20,26 @@
 
 ## Overview
 
-InterviewLens AI is a **portfolio prototype for reviewing previously recorded technical interviews**. It organizes recordings, transcripts, rubric-based feedback, speaking-pattern observations, knowledge gaps and a personalized study plan into one interface.
+InterviewLens AI is an **interview intelligence and personalized coaching SaaS platform** for reviewing previously recorded technical interviews or recording live directly in the browser. It organizes recordings, transcripts, rubric-based feedback, speaking-pattern observations, knowledge gaps, resume skill alignment, and a personalized study plan into one cohesive interface.
 
-The included **local AI provider** is a deterministic demonstration path; don't confuse its outputs with independent proof of model-based evaluation. Optional provider adapters exist for external services and require configuration.
+The included **local AI provider** is a deterministic demonstration path; optional provider adapters exist for external services (Google Gemini, OpenAI).
 
 | Area | What the app provides |
 | --- | --- |
-| Ingestion | Recorded video/audio upload and consent check |
-| Review | Time-linked transcript and question/answer workspace |
-| Coaching | Technical rubric, omissions and follow-up questions |
-| Communication | Speaking pace and filler-word feedback |
-| Learning loop | Seven-day study roadmap and practice attempts |
-| Export | PDF and JSON reporting |
-| API | FastAPI routes for auth, interviews, transcripts, learning and practice |
+| Ingestion & Live Studio | Recorded video/audio upload, in-browser webcam/mic recording, and consent check |
+| Review | Time-linked transcript and question/answer split-view workspace |
+| Coaching | Technical rubric, omissions, suggested answer frameworks and follow-up questions |
+| Communication | Speaking pace (WPM), pause profiles, and filler-word feedback |
+| Resume Alignment | Cross-reference resume skills against interview answers to highlight showcased vs. neglected credentials |
+| Learning loop | Seven-day study roadmap and practice attempts with before-and-after scoring |
+| Export | Multi-page executive PDF and JSON reporting |
+| API | Documented FastAPI routes for auth, interviews, transcripts, learning, practice, and resume alignment |
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    U["Candidate upload / demo"] --> A["FastAPI API"]
+    U["Candidate upload / live webcam recording"] --> A["FastAPI API"]
     A --> V["File validation + storage"]
     A --> DB["SQLite / configured database"]
     V --> P["Interview processing pipeline"]
