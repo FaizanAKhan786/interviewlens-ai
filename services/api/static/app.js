@@ -15,6 +15,7 @@ const state = {
   mediaTime: 0,
   isPlaying: false,
   playbackTimer: null,
+  playbackRate: 1.0,
   recentInterviews: [],
   practiceQuestions: [],
   learningPlans: [],
@@ -42,6 +43,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Route selection based on URL hash or auth
   const hash = window.location.hash.replace('#', '') || (state.user ? 'dashboard' : 'landing');
   navigateTo(hash);
+
+  // Global Keyboard Shortcuts for Interactive Media Player
+  document.addEventListener('keydown', (e) => {
+    if (state.currentRoute !== 'report') return;
+    const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable) return;
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      togglePlayback();
+    } else if (e.code === 'ArrowLeft') {
+      e.preventDefault();
+      skipMedia(-5);
+    } else if (e.code === 'ArrowRight') {
+      e.preventDefault();
+      skipMedia(5);
+    }
+  });
 });
 
 // Navigation Controller
@@ -1217,26 +1236,39 @@ async function renderReport(container, interviewId) {
               </div>
 
               <!-- Media Controls Bar -->
-              <div class="p-3 bg-surface flex items-center justify-between">
+              <div class="p-3 bg-surface flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center space-x-2">
-                  <button id="btn-play-pause" onclick="togglePlayback()" class="w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition">
+                  <button id="btn-play-pause" onclick="togglePlayback()" class="w-8 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition" title="Play/Pause (Space)">
                     <i data-lucide="play" class="w-4 h-4" id="play-icon"></i>
                   </button>
-                  <button onclick="skipMedia(-5)" class="p-1.5 rounded text-slate-400 hover:text-white transition" title="Rewind 5s">
+                  <button onclick="skipMedia(-5)" class="p-1.5 rounded text-slate-400 hover:text-white transition" title="Rewind 5s (Left Arrow)">
                     <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                   </button>
-                  <button onclick="skipMedia(5)" class="p-1.5 rounded text-slate-400 hover:text-white transition" title="Forward 5s">
+                  <button onclick="skipMedia(5)" class="p-1.5 rounded text-slate-400 hover:text-white transition" title="Forward 5s (Right Arrow)">
                     <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                   </button>
+
+                  <!-- Playback Speed Selector -->
+                  <div class="flex items-center space-x-0.5 text-[10px] font-mono border border-surface-border rounded-lg p-0.5 bg-surface-subtle ml-1">
+                    <button id="speed-btn-1" onclick="setPlaybackSpeed(1.0)" class="px-1.5 py-0.5 rounded transition ${state.playbackRate === 1.0 ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">1x</button>
+                    <button id="speed-btn-1.25" onclick="setPlaybackSpeed(1.25)" class="px-1.5 py-0.5 rounded transition ${state.playbackRate === 1.25 ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">1.25x</button>
+                    <button id="speed-btn-1.5" onclick="setPlaybackSpeed(1.5)" class="px-1.5 py-0.5 rounded transition ${state.playbackRate === 1.5 ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">1.5x</button>
+                    <button id="speed-btn-2" onclick="setPlaybackSpeed(2.0)" class="px-1.5 py-0.5 rounded transition ${state.playbackRate === 2.0 ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'}">2x</button>
+                  </div>
                 </div>
 
-                <!-- Question Timeline Pills -->
-                <div class="flex items-center space-x-1.5 overflow-x-auto text-[11px] font-mono">
-                  ${report.questions.map((q, idx) => `
-                    <button onclick="jumpToQuestion(${idx}, ${q.start_time})" class="px-2 py-0.5 rounded bg-surface-subtle hover:bg-indigo-600/30 border border-surface-border text-slate-300 transition">
-                      Q${q.question_index}
-                    </button>
-                  `).join('')}
+                <!-- Right: Hotkey Hint & Question Jump Timeline Pills -->
+                <div class="flex items-center space-x-2 overflow-x-auto text-[11px] font-mono">
+                  <span class="hidden sm:inline-flex items-center text-[10px] text-slate-500 font-mono gap-1" title="Shortcuts: Space to Play/Pause, Left/Right arrow keys for ±5s seek">
+                    <i data-lucide="keyboard" class="w-3 h-3 text-slate-400"></i> Space • ←/→ 5s
+                  </span>
+                  <div class="flex items-center space-x-1">
+                    ${report.questions.map((q, idx) => `
+                      <button onclick="jumpToQuestion(${idx}, ${q.start_time})" class="px-2 py-0.5 rounded bg-surface-subtle hover:bg-indigo-600/30 border border-surface-border text-slate-300 transition" title="Jump to Question ${q.question_index}">
+                        Q${q.question_index}
+                      </button>
+                    `).join('')}
+                  </div>
                 </div>
               </div>
             </div>
@@ -2060,19 +2092,44 @@ function togglePlayback() {
   const icon = document.getElementById('play-icon');
   if (state.isPlaying) {
     if (icon) icon.setAttribute('data-lucide', 'pause');
-    state.playbackTimer = setInterval(() => {
-      state.mediaTime += 1.0;
-      if (state.mediaTime > 145.0) {
-        state.mediaTime = 0;
-        togglePlayback();
-      }
-      updatePlayerUI();
-    }, 1000);
+    startPlaybackTimer();
   } else {
     if (icon) icon.setAttribute('data-lucide', 'play');
     clearInterval(state.playbackTimer);
   }
   if (window.lucide) lucide.createIcons();
+}
+
+function startPlaybackTimer() {
+  if (state.playbackTimer) clearInterval(state.playbackTimer);
+  const rate = state.playbackRate || 1.0;
+  const interval = Math.max(100, Math.round(1000 / rate));
+  state.playbackTimer = setInterval(() => {
+    state.mediaTime += 1.0;
+    if (state.mediaTime > 145.0) {
+      state.mediaTime = 0;
+      togglePlayback();
+    }
+    updatePlayerUI();
+  }, interval);
+}
+
+function setPlaybackSpeed(rate) {
+  state.playbackRate = rate;
+  [1.0, 1.25, 1.5, 2.0].forEach(r => {
+    const btn = document.getElementById(`speed-btn-${r}`);
+    if (btn) {
+      if (Math.abs(r - rate) < 0.01) {
+        btn.className = 'px-1.5 py-0.5 rounded transition bg-indigo-600 text-white font-bold';
+      } else {
+        btn.className = 'px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white';
+      }
+    }
+  });
+  if (state.isPlaying) {
+    startPlaybackTimer();
+  }
+  showToast(`Playback speed: ${rate}x`, 'info');
 }
 
 function updatePlayerUI() {
