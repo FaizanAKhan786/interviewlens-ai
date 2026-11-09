@@ -11,7 +11,7 @@
 [![CI Test Suite](https://github.com/FaizanAKhan786/interviewlens-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/FaizanAKhan786/interviewlens-ai/actions)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)
-[![Version](https://img.shields.io/badge/Version-v1.1.0-indigo.svg)](https://github.com/FaizanAKhan786/interviewlens-ai/releases)
+[![Version](https://img.shields.io/badge/Version-v1.1.1-indigo.svg)](https://github.com/FaizanAKhan786/interviewlens-ai/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 
 [Quick start](#quick-start) · [Architecture](#architecture) · [Coaching workflow](#coaching-workflow) · [Technical architecture](docs/architecture/overview.md)
@@ -27,7 +27,7 @@ The included **local AI provider** is a deterministic demonstration path; option
 | Area | What the app provides |
 | --- | --- |
 | Ingestion & Live Studio | Recorded video/audio upload, in-browser webcam/mic recording, and consent check |
-| Review | Time-linked transcript and question/answer split-view workspace |
+| Review | Time-linked transcript with live search, speaker filter, and question/answer split-view workspace |
 | Coaching | Technical rubric, omissions, suggested answer frameworks and follow-up questions |
 | Communication | Speaking pace (WPM), pause profiles, and filler-word feedback |
 | Resume Alignment | Cross-reference resume skills against interview answers to highlight showcased vs. neglected credentials |

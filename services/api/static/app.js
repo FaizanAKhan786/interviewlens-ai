@@ -1274,19 +1274,41 @@ async function renderReport(container, interviewId) {
             </div>
 
             <!-- Synchronized Transcript Excerpts Box -->
-            <div class="rounded-2xl glass-card border border-surface-border p-4 max-h-[380px] overflow-y-auto space-y-2.5" id="transcript-scroll-box">
-              <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <i data-lucide="file-text" class="w-3.5 h-3.5 text-indigo-400"></i> Synchronized Transcript Segments
-              </h4>
-              ${(transcriptData?.segments || []).map(seg => `
-                <div id="segment-${Math.round(seg.start_time)}" onclick="seekTo(${seg.start_time})" class="p-2.5 rounded-lg border border-surface-border text-xs cursor-pointer hover:border-indigo-500/50 transition ${seg.speaker_tag === 'Speaker 1' ? 'bg-surface-subtle/70 text-slate-300' : 'bg-background/50 text-indigo-200'}">
-                  <div class="flex items-center justify-between font-mono text-[10px] text-slate-400 mb-1">
-                    <span class="font-bold ${seg.speaker_tag === 'Speaker 1' ? 'text-cyan-400' : 'text-indigo-400'}">${seg.speaker_tag === 'Speaker 1' ? 'Interviewer' : 'Candidate'}</span>
-                    <span>${formatTime(seg.start_time)} - ${formatTime(seg.end_time)}</span>
-                  </div>
-                  <p class="leading-relaxed">${seg.text}</p>
+            <div class="rounded-2xl glass-card border border-surface-border p-4 max-h-[430px] flex flex-col space-y-2.5">
+              <div class="flex items-center justify-between gap-2 flex-wrap pb-1 border-b border-surface-border/50">
+                <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="file-text" class="w-3.5 h-3.5 text-indigo-400"></i> Synchronized Transcript
+                </h4>
+                <span id="transcript-count-badge" class="text-[10px] font-mono text-slate-400">
+                  ${(transcriptData?.segments || []).length} segments
+                </span>
+              </div>
+
+              <!-- Search and Speaker Filter Bar -->
+              <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                  <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5 pointer-events-none"></i>
+                  <input type="text" id="transcript-filter-input" oninput="filterTranscriptSegments()" placeholder="Filter keywords (e.g. system, metrics)..." class="w-full pl-8 pr-2.5 py-1.5 rounded-lg bg-surface-subtle border border-surface-border text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
                 </div>
-              `).join('')}
+                <select id="transcript-speaker-filter" onchange="filterTranscriptSegments()" class="px-2 py-1.5 rounded-lg bg-surface-subtle border border-surface-border text-xs text-slate-300 focus:outline-none focus:border-indigo-500">
+                  <option value="all">All Speakers</option>
+                  <option value="Speaker 1">Interviewer</option>
+                  <option value="Speaker 2">Candidate</option>
+                </select>
+              </div>
+
+              <!-- Scrollable Segment List -->
+              <div class="space-y-2 overflow-y-auto max-h-[290px] pr-1" id="transcript-scroll-box">
+                ${(transcriptData?.segments || []).map(seg => `
+                  <div id="segment-${Math.round(seg.start_time)}" data-speaker="${seg.speaker_tag}" data-text="${encodeURIComponent(seg.text)}" onclick="seekTo(${seg.start_time})" class="transcript-segment-card p-2.5 rounded-lg border border-surface-border text-xs cursor-pointer hover:border-indigo-500/50 transition ${seg.speaker_tag === 'Speaker 1' ? 'bg-surface-subtle/70 text-slate-300' : 'bg-background/50 text-indigo-200'}">
+                    <div class="flex items-center justify-between font-mono text-[10px] text-slate-400 mb-1">
+                      <span class="font-bold ${seg.speaker_tag === 'Speaker 1' ? 'text-cyan-400' : 'text-indigo-400'}">${seg.speaker_tag === 'Speaker 1' ? 'Interviewer' : 'Candidate'}</span>
+                      <span>${formatTime(seg.start_time)} - ${formatTime(seg.end_time)}</span>
+                    </div>
+                    <p class="leading-relaxed segment-content">${seg.text}</p>
+                  </div>
+                `).join('')}
+              </div>
             </div>
           </div>
 
@@ -2171,6 +2193,40 @@ function formatTime(secs) {
 function copyToClipboard(encoded) {
   navigator.clipboard.writeText(decodeURIComponent(encoded));
   showToast('Copied model answer to clipboard!', 'success');
+}
+
+function filterTranscriptSegments() {
+  const query = (document.getElementById('transcript-filter-input')?.value || '').toLowerCase().trim();
+  const speaker = document.getElementById('transcript-speaker-filter')?.value || 'all';
+  const cards = document.querySelectorAll('.transcript-segment-card');
+  const countBadge = document.getElementById('transcript-count-badge');
+  let visibleCount = 0;
+
+  cards.forEach(card => {
+    const cardSpeaker = card.getAttribute('data-speaker') || '';
+    const rawText = decodeURIComponent(card.getAttribute('data-text') || '');
+    const p = card.querySelector('.segment-content');
+
+    const matchesSpeaker = speaker === 'all' || cardSpeaker === speaker;
+    const matchesQuery = !query || rawText.toLowerCase().includes(query);
+
+    if (matchesSpeaker && matchesQuery) {
+      card.classList.remove('hidden');
+      visibleCount++;
+      if (query && p) {
+        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\]/g, '\\$&')})`, 'gi');
+        p.innerHTML = rawText.replace(regex, '<mark class="bg-indigo-500/40 text-indigo-100 px-1 py-0.2 rounded font-semibold">$1</mark>');
+      } else if (p) {
+        p.textContent = rawText;
+      }
+    } else {
+      card.classList.add('hidden');
+    }
+  });
+
+  if (countBadge) {
+    countBadge.innerText = `${visibleCount} of ${cards.length} segments`;
+  }
 }
 
 function downloadPdfReport(interviewId) {
