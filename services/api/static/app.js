@@ -16,6 +16,7 @@ const state = {
   isPlaying: false,
   playbackTimer: null,
   playbackRate: 1.0,
+  isMuted: false,
   recentInterviews: [],
   practiceQuestions: [],
   learningPlans: [],
@@ -59,6 +60,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (e.code === 'ArrowRight') {
       e.preventDefault();
       skipMedia(5);
+    } else if (e.code === 'KeyM') {
+      e.preventDefault();
+      toggleMute();
     }
   });
 });
@@ -1247,6 +1251,9 @@ async function renderReport(container, interviewId) {
                   <button onclick="skipMedia(5)" class="p-1.5 rounded text-slate-400 hover:text-white transition" title="Forward 5s (Right Arrow)">
                     <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                   </button>
+                  <button id="btn-mute" onclick="toggleMute()" class="p-1.5 rounded text-slate-400 hover:text-white transition" title="Mute/Unmute (M)">
+                    <i data-lucide="${state.isMuted ? 'volume-x' : 'volume-2'}" class="w-3.5 h-3.5" id="mute-icon"></i>
+                  </button>
 
                   <!-- Playback Speed Selector -->
                   <div class="flex items-center space-x-0.5 text-[10px] font-mono border border-surface-border rounded-lg p-0.5 bg-surface-subtle ml-1">
@@ -1259,8 +1266,8 @@ async function renderReport(container, interviewId) {
 
                 <!-- Right: Hotkey Hint & Question Jump Timeline Pills -->
                 <div class="flex items-center space-x-2 overflow-x-auto text-[11px] font-mono">
-                  <span class="hidden sm:inline-flex items-center text-[10px] text-slate-500 font-mono gap-1" title="Shortcuts: Space to Play/Pause, Left/Right arrow keys for ±5s seek">
-                    <i data-lucide="keyboard" class="w-3 h-3 text-slate-400"></i> Space • ←/→ 5s
+                  <span class="hidden sm:inline-flex items-center text-[10px] text-slate-500 font-mono gap-1" title="Shortcuts: Space to Play/Pause, Left/Right arrow keys for ±5s seek, M to mute/unmute">
+                    <i data-lucide="keyboard" class="w-3 h-3 text-slate-400"></i> Space • ←/→ 5s • M
                   </span>
                   <div class="flex items-center space-x-1">
                     ${report.questions.map((q, idx) => `
@@ -1279,9 +1286,17 @@ async function renderReport(container, interviewId) {
                 <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                   <i data-lucide="file-text" class="w-3.5 h-3.5 text-indigo-400"></i> Synchronized Transcript
                 </h4>
-                <span id="transcript-count-badge" class="text-[10px] font-mono text-slate-400">
-                  ${(transcriptData?.segments || []).length} segments
-                </span>
+                <div class="flex items-center gap-2">
+                  <span id="transcript-count-badge" class="text-[10px] font-mono text-slate-400">
+                    ${(transcriptData?.segments || []).length} segments
+                  </span>
+                  <button onclick="copyFullTranscript()" class="text-[10px] text-slate-400 hover:text-indigo-300 flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-subtle hover:bg-indigo-600/20 border border-surface-border transition" title="Copy full formatted transcript with timestamps">
+                    <i data-lucide="copy" class="w-3 h-3"></i> Copy All
+                  </button>
+                  <button onclick="downloadTranscriptTxt()" class="text-[10px] text-slate-400 hover:text-cyan-300 flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-subtle hover:bg-cyan-600/20 border border-surface-border transition" title="Download transcript as text file">
+                    <i data-lucide="download" class="w-3 h-3"></i> .TXT
+                  </button>
+                </div>
               </div>
 
               <!-- Search and Speaker Filter Bar -->
@@ -2227,6 +2242,56 @@ function filterTranscriptSegments() {
   if (countBadge) {
     countBadge.innerText = `${visibleCount} of ${cards.length} segments`;
   }
+}
+
+function toggleMute() {
+  state.isMuted = !state.isMuted;
+  const icon = document.getElementById('mute-icon');
+  if (icon) {
+    icon.setAttribute('data-lucide', state.isMuted ? 'volume-x' : 'volume-2');
+  }
+  if (window.lucide) lucide.createIcons();
+  showToast(state.isMuted ? 'Audio muted' : 'Audio unmuted', 'info');
+}
+
+function copyFullTranscript() {
+  const segments = state.reportData?.transcript?.segments || [];
+  if (segments.length === 0) {
+    showToast('No transcript segments available to copy', 'warning');
+    return;
+  }
+  const text = segments.map(s => {
+    const speaker = s.speaker_tag === 'Speaker 1' ? 'Interviewer' : 'Candidate';
+    return `[${formatTime(s.start_time)} - ${formatTime(s.end_time)}] ${speaker}:\n${s.text}\n`;
+  }).join('\n');
+
+  navigator.clipboard.writeText(text);
+  showToast('Full formatted transcript copied to clipboard!', 'success');
+}
+
+function downloadTranscriptTxt() {
+  const segments = state.reportData?.transcript?.segments || [];
+  if (segments.length === 0) {
+    showToast('No transcript segments available to download', 'warning');
+    return;
+  }
+  const title = state.reportData?.interview?.title || 'interview-transcript';
+  const text = `InterviewLens AI Transcript Export\nTitle: ${title}\nExported: ${new Date().toISOString()}\n\n` +
+    segments.map(s => {
+      const speaker = s.speaker_tag === 'Speaker 1' ? 'Interviewer' : 'Candidate';
+      return `[${formatTime(s.start_time)} - ${formatTime(s.end_time)}] ${speaker}:\n${s.text}\n`;
+    }).join('\n');
+
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-transcript.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Transcript downloaded as .txt!', 'success');
 }
 
 function downloadPdfReport(interviewId) {
