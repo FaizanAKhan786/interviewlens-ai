@@ -1223,6 +1223,14 @@ async function renderReport(container, interviewId) {
                   <div class="w-16 h-16 rounded-2xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center mx-auto mb-2 text-indigo-300">
                     <i data-lucide="${report.interview.is_video ? 'video' : 'volume-2'}" class="w-8 h-8"></i>
                   </div>
+                  <!-- Dynamic Waveform Equalizer -->
+                  <div id="player-equalizer" class="flex items-center justify-center gap-1 h-3.5 mb-1 opacity-0 transition-opacity duration-300">
+                    <span class="w-1 bg-indigo-400 rounded-full animate-pulse h-2"></span>
+                    <span class="w-1 bg-indigo-400 rounded-full animate-pulse h-3.5 delay-75"></span>
+                    <span class="w-1 bg-indigo-400 rounded-full animate-pulse h-2.5 delay-150"></span>
+                    <span class="w-1 bg-indigo-400 rounded-full animate-pulse h-3 delay-100"></span>
+                    <span class="w-1 bg-indigo-400 rounded-full animate-pulse h-1.5 delay-200"></span>
+                  </div>
                   <p class="text-xs font-medium text-slate-300">Candidate Audio & Video Timeline</p>
                 </div>
 
@@ -2127,11 +2135,14 @@ async function saveSpeakerAssignment(interviewId) {
 function togglePlayback() {
   state.isPlaying = !state.isPlaying;
   const icon = document.getElementById('play-icon');
+  const eq = document.getElementById('player-equalizer');
   if (state.isPlaying) {
     if (icon) icon.setAttribute('data-lucide', 'pause');
+    if (eq) { eq.classList.remove('opacity-0'); eq.classList.add('opacity-100'); }
     startPlaybackTimer();
   } else {
     if (icon) icon.setAttribute('data-lucide', 'play');
+    if (eq) { eq.classList.remove('opacity-100'); eq.classList.add('opacity-0'); }
     clearInterval(state.playbackTimer);
   }
   if (window.lucide) lucide.createIcons();
@@ -2466,10 +2477,16 @@ async function renderPractice(container, defaultQId) {
           </div>
           <div id="practice-live-studio" class="hidden"></div>
 
-          <textarea id="practice-answer-input" rows="5" placeholder="Record or type your improved technical answer here... Mention relevant metrics, production edge-cases, and clear trade-offs." class="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-white focus:outline-none focus:border-indigo-500 leading-relaxed"></textarea>
+          <textarea id="practice-answer-input" oninput="updatePracticeMetrics()" rows="5" placeholder="Record or type your improved technical answer here... Mention relevant metrics, production edge-cases, and clear trade-offs." class="w-full px-4 py-3 rounded-xl bg-surface-subtle border border-surface-border text-sm text-white focus:outline-none focus:border-indigo-500 leading-relaxed"></textarea>
 
-          <div class="flex justify-between items-center pt-2">
-            <span class="text-xs text-slate-500" id="practice-word-count">0 words</span>
+          <div class="flex flex-wrap justify-between items-center gap-2 pt-2">
+            <div class="flex items-center gap-2.5 text-xs text-slate-400 font-mono" id="practice-metrics-bar">
+              <span id="practice-word-count">0 words</span>
+              <span class="text-slate-600">•</span>
+              <span id="practice-speaking-time" class="text-indigo-300">~0s spoken pace</span>
+              <span class="text-slate-600">•</span>
+              <span id="practice-pacing-status" class="text-slate-500">Target: 120-220 words</span>
+            </div>
             <button onclick="submitPracticeAnswer()" class="px-5 py-2.5 rounded-lg gradient-accent text-xs font-semibold text-white shadow-md shadow-indigo-500/20 hover:opacity-95 transition flex items-center gap-1.5">
               <i data-lucide="send" class="w-3.5 h-3.5"></i> Submit for Rubric Evaluation
             </button>
@@ -2541,7 +2558,47 @@ function insertSamplePracticeAnswer() {
   const area = document.getElementById('practice-answer-input');
   if (area) {
     area.value = "To build a robust production RAG system, I implement a two-stage hybrid retrieval architecture. Ingestion chunks documents into 512-token segments with 10% overlap, indexed simultaneously in an HNSW vector index for semantic similarity and BM25 for sparse keyword precision. Candidate documents from both streams are fused using Reciprocal Rank Fusion (RRF), followed by a cross-encoder reranker to surface the top 5 highest-signal passages. To safeguard against hallucinations and measure retrieval quality, I run continuous evaluation benchmarks tracking Recall@K, Mean Reciprocal Rank (MRR), and Context Faithfulness using synthetic test sets.";
-    document.getElementById('practice-word-count').innerText = `${area.value.split(' ').length} words`;
+    updatePracticeMetrics();
+  }
+}
+
+function updatePracticeMetrics() {
+  const area = document.getElementById('practice-answer-input');
+  if (!area) return;
+  const words = area.value.trim().split(/\s+/).filter(w => w.length > 0);
+  const count = words.length;
+  const countEl = document.getElementById('practice-word-count');
+  const timeEl = document.getElementById('practice-speaking-time');
+  const paceEl = document.getElementById('practice-pacing-status');
+
+  if (countEl) countEl.innerText = `${count} word${count === 1 ? '' : 's'}`;
+
+  // Average conversational speech pace is ~140 words per minute (~2.33 words/sec)
+  const estimatedSeconds = Math.round((count / 140) * 60);
+  if (timeEl) {
+    if (estimatedSeconds < 60) {
+      timeEl.innerText = `~${estimatedSeconds}s spoken pace`;
+    } else {
+      const mins = Math.floor(estimatedSeconds / 60);
+      const secs = estimatedSeconds % 60;
+      timeEl.innerText = `~${mins}m ${secs}s spoken pace`;
+    }
+  }
+
+  if (paceEl) {
+    if (count === 0) {
+      paceEl.className = 'text-slate-500';
+      paceEl.innerText = 'Target: 120-220 words';
+    } else if (count < 80) {
+      paceEl.className = 'text-amber-400 font-semibold';
+      paceEl.innerText = 'Short answer (<80 words)';
+    } else if (count <= 220) {
+      paceEl.className = 'text-emerald-400 font-semibold';
+      paceEl.innerText = 'Optimal answer length';
+    } else {
+      paceEl.className = 'text-cyan-400 font-semibold';
+      paceEl.innerText = 'Comprehensive (>220 words)';
+    }
   }
 }
 

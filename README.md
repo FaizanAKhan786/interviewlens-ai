@@ -11,7 +11,7 @@
 [![CI Test Suite](https://github.com/FaizanAKhan786/interviewlens-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/FaizanAKhan786/interviewlens-ai/actions)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi&logoColor=white)
-[![Version](https://img.shields.io/badge/Version-v1.1.2-indigo.svg)](https://github.com/FaizanAKhan786/interviewlens-ai/releases)
+[![Version](https://img.shields.io/badge/Version-v1.1.3-indigo.svg)](https://github.com/FaizanAKhan786/interviewlens-ai/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 
 [Quick start](#quick-start) · [Architecture](#architecture) · [Coaching workflow](#coaching-workflow) · [Technical architecture](docs/architecture/overview.md)
