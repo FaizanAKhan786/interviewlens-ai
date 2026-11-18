@@ -14,7 +14,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Intelligent interview analysis, rubric-based technical coaching, and personalized career roadmaps.",
-    version="1.1.3"
+    version="1.1.4"
 )
 
 # CORS Middleware

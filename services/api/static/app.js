@@ -51,7 +51,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
     if (tag === 'input' || tag === 'textarea' || document.activeElement?.isContentEditable) return;
 
-    if (e.code === 'Space') {
+    if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+      e.preventDefault();
+      toggleShortcutsModal();
+    } else if (e.key === 'Escape') {
+      toggleShortcutsModal(false);
+    } else if (e.code === 'Space') {
       e.preventDefault();
       togglePlayback();
     } else if (e.code === 'ArrowLeft') {
@@ -63,6 +68,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (e.code === 'KeyM') {
       e.preventDefault();
       toggleMute();
+    } else if (e.code === 'Digit1') {
+      setPlaybackSpeed(1.0);
+    } else if (e.code === 'Digit2') {
+      setPlaybackSpeed(1.25);
+    } else if (e.code === 'Digit3') {
+      setPlaybackSpeed(1.5);
+    } else if (e.code === 'Digit4') {
+      setPlaybackSpeed(2.0);
     }
   });
 });
@@ -1274,9 +1287,9 @@ async function renderReport(container, interviewId) {
 
                 <!-- Right: Hotkey Hint & Question Jump Timeline Pills -->
                 <div class="flex items-center space-x-2 overflow-x-auto text-[11px] font-mono">
-                  <span class="hidden sm:inline-flex items-center text-[10px] text-slate-500 font-mono gap-1" title="Shortcuts: Space to Play/Pause, Left/Right arrow keys for ±5s seek, M to mute/unmute">
-                    <i data-lucide="keyboard" class="w-3 h-3 text-slate-400"></i> Space • ←/→ 5s • M
-                  </span>
+                  <button onclick="toggleShortcutsModal(true)" class="hidden sm:inline-flex items-center text-[10px] text-slate-500 hover:text-indigo-300 font-mono gap-1 transition" title="Shortcuts: Space, ←/→ 5s, M mute, 1-4 speed, ? guide">
+                    <i data-lucide="keyboard" class="w-3 h-3 text-slate-400"></i> Space • ←/→ 5s • M • ?
+                  </button>
                   <div class="flex items-center space-x-1">
                     ${report.questions.map((q, idx) => `
                       <button onclick="jumpToQuestion(${idx}, ${q.start_time})" class="px-2 py-0.5 rounded bg-surface-subtle hover:bg-indigo-600/30 border border-surface-border text-slate-300 transition" title="Jump to Question ${q.question_index}">
@@ -2253,6 +2266,19 @@ function filterTranscriptSegments() {
   if (countBadge) {
     countBadge.innerText = `${visibleCount} of ${cards.length} segments`;
   }
+}
+
+function toggleShortcutsModal(show) {
+  const modal = document.getElementById('shortcuts-modal');
+  if (!modal) return;
+  const isHidden = modal.classList.contains('hidden');
+  const shouldOpen = show !== undefined ? show : isHidden;
+  if (shouldOpen) {
+    modal.classList.remove('hidden');
+  } else {
+    modal.classList.add('hidden');
+  }
+  if (window.lucide) lucide.createIcons();
 }
 
 function toggleMute() {

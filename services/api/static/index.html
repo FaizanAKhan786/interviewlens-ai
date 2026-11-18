@@ -121,6 +121,12 @@
           <span class="hidden lg:inline font-medium">GitHub</span>
         </a>
 
+        <!-- Keyboard Shortcuts Trigger -->
+        <button onclick="toggleShortcutsModal(true)" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated transition text-xs border border-transparent hover:border-surface-border flex items-center gap-1" title="Keyboard Shortcuts (?)">
+          <i data-lucide="keyboard" class="w-4 h-4"></i>
+          <span class="hidden xl:inline text-[11px] font-mono text-slate-400">?</span>
+        </button>
+
         <!-- Demo Mode Badge / Switch -->
         <button onclick="handleQuickDemo()" class="px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
@@ -141,6 +147,59 @@
 
   <!-- NOTIFICATION TOAST CONTAINER -->
   <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- KEYBOARD SHORTCUTS MODAL -->
+  <div id="shortcuts-modal" onclick="if (event.target === this) toggleShortcutsModal(false)" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full rounded-2xl border border-surface-border p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-surface-border">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="keyboard" class="w-4 h-4 text-indigo-400"></i> Keyboard Shortcuts
+        </h3>
+        <button onclick="toggleShortcutsModal(false)" class="text-slate-400 hover:text-white transition p-1" title="Close (Esc)">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <div class="flex items-center justify-between p-2 rounded-lg bg-surface-subtle border border-surface-border/50">
+          <span class="text-slate-300">Play / Pause timeline</span>
+          <kbd class="px-2 py-0.5 rounded bg-surface border border-slate-700 font-mono text-[11px] text-indigo-300">Space</kbd>
+        </div>
+        <div class="flex items-center justify-between p-2 rounded-lg bg-surface-subtle border border-surface-border/50">
+          <span class="text-slate-300">Seek Backward / Forward 5s</span>
+          <span class="flex gap-1 font-mono text-[11px]">
+            <kbd class="px-1.5 py-0.5 rounded bg-surface border border-slate-700 text-indigo-300">←</kbd>
+            <kbd class="px-1.5 py-0.5 rounded bg-surface border border-slate-700 text-indigo-300">→</kbd>
+          </span>
+        </div>
+        <div class="flex items-center justify-between p-2 rounded-lg bg-surface-subtle border border-surface-border/50">
+          <span class="text-slate-300">Mute / Unmute playback</span>
+          <kbd class="px-2 py-0.5 rounded bg-surface border border-slate-700 font-mono text-[11px] text-indigo-300">M</kbd>
+        </div>
+        <div class="flex items-center justify-between p-2 rounded-lg bg-surface-subtle border border-surface-border/50">
+          <span class="text-slate-300">Playback Speed (1x, 1.25x, 1.5x, 2x)</span>
+          <span class="flex gap-1 font-mono text-[11px]">
+            <kbd class="px-1.5 py-0.5 rounded bg-surface border border-slate-700 text-indigo-300">1</kbd>
+            <kbd class="px-1.5 py-0.5 rounded bg-surface border border-slate-700 text-indigo-300">2</kbd>
+            <kbd class="px-1.5 py-0.5 rounded bg-surface border border-slate-700 text-indigo-300">3</kbd>
+            <kbd class="px-1.5 py-0.5 rounded bg-surface border border-slate-700 text-indigo-300">4</kbd>
+          </span>
+        </div>
+        <div class="flex items-center justify-between p-2 rounded-lg bg-surface-subtle border border-surface-border/50">
+          <span class="text-slate-300">Toggle shortcuts guide</span>
+          <kbd class="px-2 py-0.5 rounded bg-surface border border-slate-700 font-mono text-[11px] text-indigo-300">?</kbd>
+        </div>
+        <div class="flex items-center justify-between p-2 rounded-lg bg-surface-subtle border border-surface-border/50">
+          <span class="text-slate-300">Close modal / overlay</span>
+          <kbd class="px-2 py-0.5 rounded bg-surface border border-slate-700 font-mono text-[11px] text-indigo-300">Esc</kbd>
+        </div>
+      </div>
+
+      <div class="text-[11px] text-slate-500 text-center pt-1 font-mono">
+        Hotkeys are active across interview report reviews.
+      </div>
+    </div>
+  </div>
 
   <!-- LOAD APP LOGIC -->
   <script src="/static/app.js"></script>
